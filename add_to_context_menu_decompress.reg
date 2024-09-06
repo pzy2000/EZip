@@ -1,0 +1,8 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\*\shell\SmartDecompressPtd]
+@="smart decompress(by ptd)"
+"MultiSelectModel"="Single"
+
+[HKEY_CLASSES_ROOT\*\shell\SmartDecompressPtd\command]
+@="\"E:\\anaconda\\envs\\leis\\python.exe\" \"D:\\Easy_Zip\\main.py\" \"decompress\" %1"

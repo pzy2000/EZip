@@ -1,0 +1,15 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\*\shell\SmartCompressPtd]
+@="smart compress(by ptd)"
+
+
+[HKEY_CLASSES_ROOT\*\shell\SmartCompressPtd\command]
+@="\"E:\\anaconda\\envs\\leis\\python.exe\" \"H:\\Easy_Zip\\main.py\" \"compress\" %1"
+
+[HKEY_CLASSES_ROOT\Directory\shell\SmartCompressPtd]
+@="smart compress(by ptd)"
+
+
+[HKEY_CLASSES_ROOT\Directory\shell\SmartCompressPtd\command]
+@="\"E:\\anaconda\\envs\\leis\\python.exe\" \"H:\\Easy_Zip\\main.py\" \"compress\" %1"
