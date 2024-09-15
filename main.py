@@ -1,4 +1,5 @@
 import os
+
 os.environ['UNRAR_LIB_PATH'] = './unrar/unrar.dll'  # 设置 UNRAR 库路径
 import sys
 import time
@@ -13,6 +14,7 @@ import atexit
 import signal
 import struct
 from io import BytesIO
+
 # 锁文件和临时文件路径，放置于脚本的同级目录
 LOCK_FILE = 'smart_compress.lock'
 TEMP_FILE = 'smart_compress_files.txt'
@@ -216,6 +218,15 @@ def get_all_files(file_paths):
     return all_files
 
 
+def update_status(message):
+    """更新状态信息显示"""
+    status_text.config(state='normal')  # 允许插入
+    status_text.delete(1.0, 'end')  # 清空当前内容
+    status_text.insert('end', message)  # 插入新内容
+    status_text.config(state='disabled')  # 禁止编辑
+    root.update_idletasks()
+
+
 def zip_files(file_paths, output_path, compression_format, encrypt=False, password=None):
     # 获取所有文件，包括文件夹中的所有文件
     all_files = get_all_files(file_paths)
@@ -237,6 +248,7 @@ def zip_files(file_paths, output_path, compression_format, encrypt=False, passwo
         for i, file_path in enumerate(all_files):
             arcname = os.path.relpath(file_path, os.path.dirname(file_paths[0]))
             file_size = os.path.getsize(file_path)
+            update_status(f"Compressing {file_path}")
             # 使用 BytesIO 缓存整个文件内容
             with BytesIO() as buffer:
                 with open(file_path, 'rb') as f:
@@ -258,6 +270,7 @@ def zip_files(file_paths, output_path, compression_format, encrypt=False, passwo
         with py7zr.SevenZipFile(output_file, 'w') as archive:
             for i, file_path in enumerate(all_files):
                 arcname = os.path.relpath(file_path, os.path.dirname(file_paths[0]))
+                update_status(f"Compressing {file_path}")
                 archive.write(file_path, arcname=arcname)
                 update_file_progress(i + 1, total_files)
         print(f"文件已压缩为 7z 文件：{output_file}")
@@ -271,6 +284,7 @@ def zip_files(file_paths, output_path, compression_format, encrypt=False, passwo
                 for i, file_path in enumerate(all_files):
                     arcname = os.path.relpath(file_path, os.path.dirname(file_paths[0]))
                     file_size = os.path.getsize(file_path)
+                    update_status(f"Compressing {file_path}")
                     # 写入文件头（文件名长度和文件内容长度）
                     compressor.write(struct.pack('<II', len(arcname), file_size))
                     compressor.write(arcname.encode('utf-8'))
@@ -285,6 +299,7 @@ def zip_files(file_paths, output_path, compression_format, encrypt=False, passwo
     else:
         messagebox.showerror("错误", "不支持的压缩格式")
 
+    update_status("Compression completed")
     delete_temp_file()  # 压缩完成后删除临时文件
 
 
@@ -369,17 +384,16 @@ def start_compress():
 
 
 if __name__ == "__main__":
-    # 获取要压缩的文件路径
+    # 初始化 GUI
     if len(sys.argv) >= 3 and sys.argv[1] == "compress":
         selected_files = sys.argv[2:]
         write_to_temp_file(selected_files)
 
     if is_main_instance():
-        # 主实例，启动GUI并定时处理文件
         root = tk.Tk()
-        root.title("EZip-简单压缩")
-        root.geometry("600x560")
-        root.resizable(0, 0)
+        root.title("压缩和解压工具")
+        root.geometry("600x650")
+        root.resizable(1, 1)  # 允许窗口大小调整
 
         zip_path = tk.StringVar()
         extract_path = tk.StringVar()
@@ -391,6 +405,7 @@ if __name__ == "__main__":
         encrypt_var = tk.BooleanVar(value=False)
         show_password = tk.BooleanVar(value=False)
         compress_format = tk.StringVar(value="ZIP")
+        status_var = tk.StringVar()
 
         tk.Label(root, text="选择压缩文件:").grid(row=0, column=0, padx=5, pady=5)
         tk.Entry(root, textvariable=zip_path, width=50).grid(row=0, column=1, padx=5, pady=5)
@@ -427,17 +442,31 @@ if __name__ == "__main__":
                                                                                                                column=1,
                                                                                                                pady=5)
 
-        tk.Label(root, text="当前压缩进度:").grid(row=11, column=0, padx=5, pady=5)
+        tk.Label(root, text="当前文件压缩进度:").grid(row=11, column=0, padx=5, pady=5)
         block_progress = ttk.Progressbar(root, orient="horizontal", length=400, mode="determinate")
         block_progress.grid(row=11, column=1, padx=5, pady=5)
 
-        tk.Label(root, text="总压缩进度:").grid(row=12, column=0, padx=5, pady=5)
+        tk.Label(root, text="总文件压缩进度:").grid(row=12, column=0, padx=5, pady=5)
         file_progress = ttk.Progressbar(root, orient="horizontal", length=400, mode="determinate")
         file_progress.grid(row=12, column=1, padx=5, pady=5)
 
-        tk.Button(root, text="开始压缩", command=start_compress).grid(row=13, column=1, pady=10)
+        # 创建一个可调整大小的 Frame 容器来放置文本框
+        frame = tk.Frame(root)
+        frame.grid(row=13, column=0, columnspan=3, padx=5, pady=5, sticky="nsew")
+        frame.grid_rowconfigure(0, weight=1)
+        frame.grid_columnconfigure(0, weight=1)
+
+        # 添加显示当前操作的文本框，设置为可以调整大小
+        status_text = tk.Text(frame, height=5, wrap='word', state='disabled', bg='white')
+        status_text.grid(row=0, column=0, sticky="nsew")
+
+        # 使文本框能够随着窗口大小调整
+        root.grid_rowconfigure(13, weight=1)
+        root.grid_columnconfigure(1, weight=1)
+
+        tk.Button(root, text="开始压缩", command=start_compress).grid(row=14, column=1, pady=10)
 
         threading.Thread(target=process_files, daemon=True).start()
 
         root.mainloop()
-        release_lock()  # 释放锁
+        release_lock()
